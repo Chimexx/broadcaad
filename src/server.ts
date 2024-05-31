@@ -2,7 +2,6 @@ require('dotenv').config();
 import http from "http";
 import bodyParser from "body-parser";
 import express from 'express';
-import connectDB from './config/db';
 import authRoute from "./routes/auth";
 import mediaRoute from "./routes/media";
 import historyRoute from "./routes/history";
