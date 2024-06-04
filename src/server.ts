@@ -16,7 +16,6 @@ app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors("*"))
 
-// Route definitions
 app.use('/api/auth', authRoute);
 app.use('/api/media', mediaRoute);
 app.use('/api/history', historyRoute);

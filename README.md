@@ -18,9 +18,9 @@
 ***CLOUDINARY_API_SECRET***
 
 
-**Endpoints:**
-
 **Start Server:** npm start
+
+**Endpoints:**
 
 1. LOGIN: 
 - Method: POST

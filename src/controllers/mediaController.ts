@@ -5,10 +5,10 @@ import cloudinary from 'cloudinary';
 import axios from 'axios';
 import { MediaModel } from '../models/media.model';
 
+const fileLimit = 30 * 1024 * 1024 //30mb
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 30 * 1024 * 1024 } }); // 30mb
+const upload = multer({ storage });
 
-/* The `uploadMedia` function is responsible for handling the upload of media files. */
 export const uploadMedia = [
   upload.single('file'),
   async (req: Request, res: Response) => {
@@ -26,6 +26,9 @@ export const uploadMedia = [
         return res.status(400).send('Invalid file type. Please upload a video.');
       }
 
+      if (req.file.size > fileLimit) {
+        return res.status(413).send('File size exceeds limit. Please upload a video under 30MB.');
+      }
 
       //Upload to cloudinary server
       cloudinary.v2.uploader.upload_stream({ resource_type: 'auto' }, async (error: any, result: any) => {
