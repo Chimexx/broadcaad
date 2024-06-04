@@ -6,14 +6,15 @@ import authRoute from "./routes/auth";
 import mediaRoute from "./routes/media";
 import historyRoute from "./routes/history";
 import mongoose from "mongoose";
+import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const uri = process.env.MONGODB_URI as string
 
-// Initialize Middleware
 app.use(express.json());
 app.use(bodyParser.json());
+app.use(cors("*"))
 
 // Route definitions
 app.use('/api/auth', authRoute);

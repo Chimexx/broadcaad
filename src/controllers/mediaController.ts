@@ -8,12 +8,7 @@ import { MediaModel } from '../models/media.model';
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 30 * 1024 * 1024 } }); // 30mb
 
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
+/* The `uploadMedia` function is responsible for handling the upload of media files. */
 export const uploadMedia = [
   upload.single('file'),
   async (req: Request, res: Response) => {
@@ -31,11 +26,13 @@ export const uploadMedia = [
         return res.status(400).send('Invalid file type. Please upload a video.');
       }
 
+
+      //Upload to cloudinary server
       cloudinary.v2.uploader.upload_stream({ resource_type: 'auto' }, async (error: any, result: any) => {
         if (error) {
-          console.error(error);
           return res.status(500).send('Upload failed');
         }
+
         let newMedia = await MediaModel.create({
           url: result.secure_url,
           format: result.format,
@@ -61,6 +58,10 @@ export const uploadMedia = [
   },
 ];
 
+/**
+ * The function fetches a media file from a Cloudinary URL and streams a partial content of the file to
+ * the client based on the requested range.
+ */
 export const fetchMedia = async (req: Request, res: Response) => {
   const { mediaId } = req.params;
 
@@ -68,20 +69,16 @@ export const fetchMedia = async (req: Request, res: Response) => {
     const media = await MediaModel.findById(mediaId);
 
     if (!media) {
-      return res.status(404).json({ msg: 'Media not found!' });
+      return res.status(404).json({ message: 'Media not found!' });
     }
 
     const cloudinaryUrl = media.url;
+    const range = req.headers.range || "bytes=0-";
 
-    const range = req.headers.range;
-    if (!range) {
-      return res.status(416).send('Range header is required');
-    }
-
-    // Get the video size from Cloudinary 
+    /* Information about the media file stored on Cloudinary and setting up the necessary parameters for streaming a partial content of the media file to the client. */
     const headResponse = await axios.head(cloudinaryUrl);
     const totalLength = parseInt(headResponse.headers['content-length'], 10);
-
+    const contentType = headResponse.headers['content-type'].split(';')[0]
     const chunkSize = 10 ** 6;
     const start = Number(range.replace(/\D/g, ""));
     const end = Math.min(start + chunkSize, totalLength - 1);
@@ -89,22 +86,28 @@ export const fetchMedia = async (req: Request, res: Response) => {
     // Calculate the content length for this chunk
     const contentLength = (end - start) + 1;
 
-    // Set headers for partial content
-    res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${end}/${totalLength}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': contentLength,
-      'Content-Type': 'video/mp4'
-    });
-
+    //Stream media to client via pipe
     const response = await axios.get(cloudinaryUrl, {
       responseType: 'stream',
       headers: { Range: `bytes=${start}-${end}` }
     });
 
-    response.data.pipe(res);
+    // Set headers for partial content
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${totalLength}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': contentLength,
+      'Content-Type': contentType
+    });
+
+    response.data.pipe(res).on('error', (err: Error) => {
+      res.status(500).send(err.message);
+    });
+
   } catch (error) {
     console.error('Error fetching video:', (error as Error).message);
     res.status(500).send('Internal Server Error');
   }
 };
+
+

@@ -1,33 +1,57 @@
 
 import { Request, Response } from 'express';
-// import History from '../models/History';
+import { HistoryModel } from '../models/history.model';
 
-interface AuthRequest extends Request {
-  user?: any;
-}
+/**
+ * The `saveHistory` function  saves user history data for a specific media item with for a user
+ */
+export const saveMediaHistory = async (req: Request, res: Response) => {
+  const { mediaId, timestamp, userId } = req.body;
 
-export const saveHistory = async (req: AuthRequest, res: Response) => {
-  const { mediaId, currentTime } = req.body;
   try {
-    // let history = await History.findOne({ userId: req.user.id, mediaId });
-    // if (history) {
-    //   history.currentTime = currentTime;
-    // } else {
-    //   history = new History({ userId: req.user.id, mediaId, currentTime });
-    // }
-    // await history.save();
-    res.json(history);
+
+    if (!mediaId || !timestamp || !userId) {
+      return res.status(400).send('Please supply required data');
+    }
+
+    let history = await HistoryModel.findOne({ userId, mediaId });
+
+    if (history) {
+      history.timestamp = timestamp;
+    } else {
+      history = new HistoryModel({ userId, mediaId, timestamp });
+    }
+
+    await history.save();
+
+    res.send({ status: 'success', message: "history saved", data: history });
   } catch (err) {
     console.error((err as any).message);
     res.status(500).send('Server error');
   }
 };
 
-export const getHistory = async (req: AuthRequest, res: Response) => {
-  const { mediaId } = req.params;
+
+/**
+ * The function `getMediaHistory` retrieves the viewing history of a specific media item for a given
+ * user.
+ */
+export const getMediaHistory = async (req: Request, res: Response) => {
+  const { mediaId, userId } = req.params;
+
   try {
-    // const history = await History.findOne({ userId: req.user.id, mediaId });
-    res.json(history);
+
+    if (!mediaId || !userId) {
+      return res.status(400).send('Please supply required data');
+    }
+
+    let history = await HistoryModel.findOne({ userId, mediaId });
+
+    if (!history) {
+      return res.status(400).send('History not found');
+    }
+
+    res.status(200).json({ status: 'success', data: history });
   } catch (err) {
     console.error((err as any).message);
     res.status(500).send('Server error');
